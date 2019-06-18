@@ -221,9 +221,9 @@ func withDBSelection(dial radix.ConnFunc, db uint8) radix.ConnFunc {
 	}
 }
 
-func scanKeys(client radix.Client, keyBatches chan<- []string, progressNotifications chan<- ProgressNotification) error {
+func scanKeys(client radix.Client, keyBatches chan<- []string, progressNotifications chan<- ProgressNotification, pattern string) error {
 	keyBatchSize := 100
-	s := radix.NewScanner(client, radix.ScanOpts{Command: "SCAN", Count: keyBatchSize})
+	s := radix.NewScanner(client, radix.ScanOpts{Command: "SCAN", Count: keyBatchSize, Pattern: pattern})
 
 	var dbSize int
 	if err := client.Do(radix.Cmd(&dbSize, "DBSIZE")); err != nil {
@@ -251,7 +251,7 @@ func scanKeys(client radix.Client, keyBatches chan<- []string, progressNotificat
 }
 
 // DumpDB dumps all keys from a single Redis DB
-func DumpDB(redisURL string, db uint8, nWorkers int, withTTL bool, logger *log.Logger, serializer func([]string) string, progress chan<- ProgressNotification) error {
+func DumpDB(redisURL string, db uint8, nWorkers int, withTTL bool, logger *log.Logger, serializer func([]string) string, progress chan<- ProgressNotification, pattern string) error {
 	var err error
 
 	errors := make(chan error)
@@ -280,7 +280,7 @@ func DumpDB(redisURL string, db uint8, nWorkers int, withTTL bool, logger *log.L
 		go dumpKeysWorker(client, keyBatches, withTTL, logger, serializer, errors, done)
 	}
 
-	scanKeys(client, keyBatches, progress)
+	scanKeys(client, keyBatches, progress, pattern)
 	close(keyBatches)
 
 	for i := 0; i < nWorkers; i++ {
@@ -293,17 +293,17 @@ func DumpDB(redisURL string, db uint8, nWorkers int, withTTL bool, logger *log.L
 // DumpServer dumps all Keys from the redis server given by redisURL,
 // to the Logger logger. Progress notification informations
 // are regularly sent to the channel progressNotifications
-func DumpServer(redisURL string, nWorkers int, withTTL bool, logger *log.Logger, serializer func([]string) string, progress chan<- ProgressNotification) error {
-	dbs, err := getDBIndexes(redisURL)
-	if err != nil {
+func DumpServer(redisURL string, db uint8, nWorkers int, withTTL bool, logger *log.Logger, serializer func([]string) string, progress chan<- ProgressNotification, pattern string) error {
+	//dbs, err := getDBIndexes(redisURL)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, db := range dbs {
+	if err := DumpDB(redisURL, db, nWorkers, withTTL, logger, serializer, progress, pattern); err != nil {
 		return err
 	}
-
-	for _, db := range dbs {
-		if err = DumpDB(redisURL, db, nWorkers, withTTL, logger, serializer, progress); err != nil {
-			return err
-		}
-	}
+	// }
 
 	return nil
 }

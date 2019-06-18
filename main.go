@@ -31,10 +31,12 @@ func realMain() int {
 	// TODO: Number of workers & TTL as parameters
 	host := flag.String("host", "127.0.0.1", "Server host")
 	port := flag.Int("port", 6379, "Server port")
+	db := flag.Int("n", 0, "redis db")
 	nWorkers := flag.Int("n", 10, "Parallel workers")
 	withTTL := flag.Bool("ttl", true, "Preserve Keys TTL")
 	output := flag.String("output", "resp", "Output type - can be resp or commands")
 	silent := flag.Bool("s", false, "Silent mode (disable progress bar)")
+	pattern := flag.String("pattern", "", "SCAN MATCH")
 	flag.Parse()
 
 	var serializer func([]string) string
@@ -70,7 +72,7 @@ func realMain() int {
 	}
 
 	logger := log.New(os.Stdout, "", 0)
-	if err = redisdump.DumpServer(*host+":"+strconv.Itoa(*port), *nWorkers, *withTTL, logger, serializer, progressNotifs); err != nil {
+	if err = redisdump.DumpServer(*host+":"+strconv.Itoa(*port), uint8(*db), *nWorkers, *withTTL, logger, serializer, progressNotifs, *pattern); err != nil {
 		fmt.Println(err)
 		return 1
 	}
