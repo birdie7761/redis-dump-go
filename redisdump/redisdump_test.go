@@ -2,6 +2,8 @@ package redisdump
 
 import (
 	"testing"
+	"fmt"
+	"time"
 )
 
 func testEqString(a, b []string) bool {
@@ -115,6 +117,7 @@ func TestRESPSerializer(t *testing.T) {
 	testCases := []testCase{
 		{command: []string{"SET", "key", "value"}, expected: "*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n"},
 		{command: []string{"SET", "key1", "😈"}, expected: "*3\r\n$3\r\nSET\r\n$4\r\nkey1\r\n$4\r\n😈\r\n"},
+		{command: []string{"SET", "key1", "ͭ sr java.lang.Long;̤ьϣ߂ J valuexr java.lang.NumberƬ՝ՠ˂  xp  kmEaf"}, expected: "*3\r\n$3\r\nSET\r\n$4\r\nkey1\r\n$4\r\ns测s试s\r\n"},
 	}
 
 	for _, test := range testCases {
@@ -137,4 +140,14 @@ func TestParseKeyspaceInfo(t *testing.T) {
 	if !testEqUint8(dbIds, []uint8{0, 2}) {
 		t.Errorf("Failed parsing keyspaceInfo: got %v", dbIds)
 	}
+}
+
+func TestAddTTL(t *testing.T){
+	const timeFormat = "2 Jan, 2006 3:04pm (MST)"
+	test , err := time.Parse( timeFormat, "25 Oct, 2015 1:59am (BST)" )
+	fmt.Println( test , test.UTC() , err)
+	dur , _ := time.ParseDuration( "1m" )
+	test = test.Add( dur )
+	fmt.Println( test , test.UTC())
+	t.Log("end")
 }
